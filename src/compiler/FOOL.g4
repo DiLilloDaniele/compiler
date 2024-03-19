@@ -14,7 +14,7 @@ progbody : LET ( cldec+ dec* | dec+ ) IN exp SEMIC #letInProg
          | exp SEMIC                               #noDecProg
          ;
 
-cldec  : CLASS ID
+cldec  : CLASS ID (EXTENDS ID)?
               LPAR (ID COLON type (COMMA ID COLON type)* )? RPAR
               CLPAR
                    methdec*
@@ -90,6 +90,7 @@ IN      : 'in' ;
 VAR     : 'var' ;
 FUN	    : 'fun' ;
 CLASS	: 'class' ;
+EXTENDS : 'extends' ;	
 NEW 	: 'new' ;
 NULL    : 'null' ;
 INT	    : 'int' ;
@@ -104,3 +105,4 @@ WHITESP  : ( '\t' | ' ' | '\r' | '\n' )+    -> channel(HIDDEN) ;
 COMMENT : '/*' .*? '*/' -> channel(HIDDEN) ;
 
 ERR   	 : . { System.out.println("Invalid char: "+ getText() +" at line "+getLine()); lexicalErrors++; } -> channel(HIDDEN);
+

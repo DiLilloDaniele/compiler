@@ -58,6 +58,17 @@ public class AST {
 
 		String label;
 		int offset;
+		TypeNode type;
+
+		public void setType(TypeNode _type) {
+			this.type = _type;
+		}
+
+		@Override
+		public TypeNode getType() {
+			return type;
+		}
+
 		MethodNode(String i, TypeNode rt, List<ParNode> pl, List<DecNode> dl, Node e) {
             super(i, rt, pl, dl, e);
 		}
@@ -132,6 +143,10 @@ public class AST {
 		final String id;
 		final List<FieldNode> fieldlist;
 		final List<MethodNode> methodlist;
+		String superId = "";
+		ClassTypeNode type; // tipo della classe
+		STentry superEntry; // entry della classe da cui eredita
+
 		ClassNode(String i, List<FieldNode> pl, List<MethodNode> fl) {
 			id=i;
 			fieldlist =Collections.unmodifiableList(pl);

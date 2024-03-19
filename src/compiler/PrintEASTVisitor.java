@@ -4,6 +4,8 @@ import compiler.AST.*;
 import compiler.lib.*;
 import compiler.exc.*;
 
+import java.util.Objects;
+
 public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 
 	PrintEASTVisitor() { super(false,true); } 
@@ -248,7 +250,7 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 
 	@Override
 	public Void visitNode(ClassNode n) throws VoidException {
-		printNode(n,n.id+" at nestinglevel 0");
+		printNode(n,n.id+" at nestinglevel 0 extends " + (Objects.equals(n.superId, "") ? "None" : n.superId));
 		for(FieldNode f: n.fieldlist) visit(f);
 		for(MethodNode m: n.methodlist) visit(m);
 		return null;

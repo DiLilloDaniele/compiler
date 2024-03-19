@@ -1,7 +1,6 @@
 package compiler;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
@@ -162,17 +161,22 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 		List<FieldNode> fieldList = new ArrayList<>();
 		// navigo tutti i campi da indice 1 (tralasciando quindi l'ID della classe) e cerco il tipo di indice i - 1 dato
 		// che l'indice del primo tipo del primo campo è 0, scalato di 1 dalla lista dei campi
-		for (int i = 1; i < c.ID().size(); i++) {
-			FieldNode p = new FieldNode(c.ID(i).getText(),(TypeNode) visit(c.type(i - 1)));
+		// indice 2 perché ID in indice 1 è EXTENDS (se presente)
+		int startIndex = (c.EXTENDS() == null ? 1 : 2);
+		for (int i = startIndex; i < c.ID().size(); i++) {
+			FieldNode p = new FieldNode(c.ID(i).getText(),(TypeNode) visit(c.type(i - startIndex)));
 			p.setLine(c.ID(i).getSymbol().getLine());
 			fieldList.add(p);
 		}
 		List<MethodNode> funList = new ArrayList<>();
 		for (MethdecContext dec : c.methdec()) funList.add((MethodNode) visit(dec));
-		Node n = null;
+		ClassNode n = null;
 		if (c.ID().size()>0) {
 			n = new ClassNode(c.ID(0).getText(),fieldList,funList);
 			n.setLine(c.CLASS().getSymbol().getLine());
+			if(c.EXTENDS() != null) {
+				n.superId = c.ID(1).getText();
+			}
 		}
 		return n;
 	}
