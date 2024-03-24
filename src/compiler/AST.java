@@ -46,6 +46,9 @@ public class AST {
 	}
 
 	public static class FieldNode extends ParNode {
+
+		boolean isOverride;
+		int offset;
 		FieldNode(String i, TypeNode t) {
 			super(i, t);
 		}

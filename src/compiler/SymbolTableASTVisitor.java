@@ -82,7 +82,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	@Override
 	public Void visitNode(ClassNode n) throws VoidException {
 		if (print) printNode(n);
-		System.out.println("Analizzo " + n.id);
 		Map<String, STentry> hm = symTable.get(0);
 
 		ClassTypeNode classTypeNode;
@@ -91,7 +90,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 		if(Objects.equals(n.superId, "")) {
 			// creo un ClassTypeNode da riempire successivamente
-			System.out.println("NO EXTENDS");
 			ArrayList<TypeNode> fields = new ArrayList<>();
 			ArrayList<MethodTypeNode> methods = new ArrayList<>();
 			classTypeNode = new ClassTypeNode(fields, methods);
@@ -158,7 +156,9 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 				} else {
 					// correct overriding
 					virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), oldEntry.offset));
-					classTypeNode.allFields.set(i, field.getType()); // TODO ????
+					field.offset = oldEntry.offset;
+					field.isOverride = true;
+					classTypeNode.allFields.set(Math.abs(oldEntry.offset) - 1, field.getType()); // TODO ????
 				}
 
 			}
@@ -173,7 +173,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 			if(!virtualTable.containsKey(method.id)) {
 				// non c'è override
-				System.out.println("Non c'è override: " + method.type);
 				if (virtualTable.put(method.id, new STentry(nestingLevel, method.getType(), decOffset)) != null) {
 					System.out.println("Method id " + n.id+"."+method.id + " at line " + n.getLine() + " already declared");
 					stErrors++;
@@ -184,7 +183,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 				classTypeNode.allMethods.add(new MethodTypeNode(new ArrowTypeNode(method.parlist.stream().map(DecNode::getType).collect(Collectors.toList()), method.retType)));
 			} else {
 				// c'è override
-				System.out.println("C'è override");
 				STentry oldEntry = virtualTable.get(method.id);
 				// invalid overriding
 				if(!(oldEntry.type instanceof MethodTypeNode)) {
@@ -227,7 +225,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 		// Creating and setting the method type
 		MethodTypeNode methodType = new MethodTypeNode(new ArrowTypeNode(parTypes, n.retType));
-		System.out.println("Metodo " + n.id + " di tipo: " + methodType);
 		n.setType(methodType);
 
 		//creare una nuova hashmap per la symTable relativa allo scope del metodo

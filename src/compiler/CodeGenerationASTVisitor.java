@@ -18,6 +18,8 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
   CodeGenerationASTVisitor() {}
   CodeGenerationASTVisitor(boolean debug) {super(false,debug);} //enables print for debugging
 
+	List<List<String>> dispatchTables = new ArrayList<>();
+
 	@Override
 	public String visitNode(ProgLetInNode n) {
 		if (print) printNode(n);
@@ -201,18 +203,29 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		);
 	}
 
-
-
 	@Override
 	public String visitNode(ClassNode n) throws VoidException {
 		if (print) printNode(n,n.id);
 		ArrayList<String> dispatchTable = new ArrayList<>();
+		if(!n.superId.isEmpty()) {
+			var parentTable = dispatchTables.get(-n.superEntry.offset - 2);
+			dispatchTable.addAll(parentTable);
+		}
 		for(MethodNode method : n.methodlist) {
 			String freshLabel = freshFunLabel();
-			dispatchTable.add(freshLabel);
+			//dispatchTable.add(freshLabel);
 			method.label = freshLabel;
+			int methodOffset = method.offset;
+			if(methodOffset >= dispatchTable.size()) {
+				// se il metodo non fa overriding, lo aggiungo alla fine della lista
+				dispatchTable.add(freshLabel);
+			} else {
+				// se il metodo fa overriding, sostituisco quello vecchio
+				dispatchTable.set(methodOffset, freshLabel);
+			}
 			visit(method);
 		}
+
 		String labels = "";
 		for (String methodLabel : dispatchTable) {
 			labels = nlJoin(labels,
@@ -226,6 +239,8 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 					"shp" // memorizzo il risultato della somma in hp (hp = hp + 1)
 			);
 		}
+
+		dispatchTables.add(dispatchTable);
 
 		return nlJoin(
 				"/* class " + n.id + " declaration */",

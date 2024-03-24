@@ -5,6 +5,7 @@ import compiler.exc.*;
 import compiler.lib.*;
 
 import java.sql.Ref;
+import java.util.Objects;
 
 import static compiler.TypeRels.*;
 
@@ -16,7 +17,7 @@ import static compiler.TypeRels.*;
 //visitSTentry(s) ritorna, per una STentry s, il tipo contenuto al suo interno
 public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException> {
 
-	TypeCheckEASTVisitor() { super(true); } // enables incomplete tree exceptions 
+	TypeCheckEASTVisitor() { super(true); } // enables incomplete tree exceptions
 	TypeCheckEASTVisitor(boolean debug) { super(true,debug); } // enables print for debugging
 
 	//checks that a type object is visitable (not incomplete) 
@@ -78,7 +79,7 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		// check che t1 e t2 siano istanze di RefType (siano entrambi riferimenti ad oggetti)
 		if(t1 instanceof RefTypeNode && t2 instanceof RefTypeNode) {
 			// in caso positivo controlliamo che si riferiscano alla stessa classe
-			if ( !isSameClass((RefTypeNode)t2,(RefTypeNode) t1) )
+			if ( !isSameClass((RefTypeNode)t2,(RefTypeNode) t1) && !isSubClass((RefTypeNode)t2,(RefTypeNode) t1))
 				throw new TypeException("Incompatible class for variable " + n.id,n.getLine());
 		}
 
@@ -108,13 +109,44 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 	@Override
 	public TypeNode visitNode(ClassNode n) throws TypeException {
 		if (print) printNode(n,n.id);
+		boolean extension = false;
+		if(!Objects.equals(n.superId, "")) {
+			System.out.println("AGGIUNGO UNA ESTENSIONE: " + n.id + " extends " + n.superId);
+			superType.put(n.id, n.superId);
+			extension = true;
+		}
+
+		if(extension) {
+			for(int i = 0; i < n.fieldlist.size(); i++) {
+				var field = n.fieldlist.get(i);
+				/**
+				 *  calcolo offset per recuperare il corrispettivo TypeNode presente
+				 * in relativo ClassTypeNode
+				 **/
+				int position = Math.abs(n.fieldlist.get(i).offset) - 1;
+				ClassTypeNode parent = (ClassTypeNode) n.superEntry.type;
+				ClassTypeNode currentClass = (ClassTypeNode) n.type;
+				if(position < parent.allFields.size() && i < n.type.allFields.size()) {
+					// overriding
+					if(field.isOverride) {
+						var fieldType = currentClass.allFields.get(position);
+						var parentField = parent.allFields.get(position);
+						System.out.println("Controllo " + fieldType + " sottotipo di " + parentField);
+						if(!isSubtype(fieldType, parentField)) {
+							throw new TypeException("Invalid override: Field " + i + "-th is not subtype of its parent field: ", n.getLine());
+						}
+					}
+				}
+			}
+		}
+
 		for (Node method : n.methodlist)
 			try {
 				// controlliamo i tipi dei metodi presenti all'interno della classe
 				visit(method);
 			} catch (IncomplException e) {
 			} catch (TypeException e) {
-				System.out.println("Type checking error in a declaration of a method: " + e.text);
+				throw new TypeException("Type checking error in a declaration of a method: " + e.text, n.getLine());
 			}
 		return null;
 

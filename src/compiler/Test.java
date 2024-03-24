@@ -35,7 +35,7 @@ public class Test {
     	System.out.println("Visualizing Enriched AST.");
     	new PrintEASTVisitor().visit(ast);
     	System.out.println("");
-/*
+
     	System.out.println("Checking Types.");
     	try {
     		TypeCheckEASTVisitor typeCheckVisitor = new TypeCheckEASTVisitor();
@@ -76,7 +76,7 @@ public class Test {
     	System.out.println("Running generated code via Stack Virtual Machine.");
     	ExecuteVM vm = new ExecuteVM(parserASM.code);
     	vm.cpu();
-*/
+
     }
 }
 
