@@ -117,15 +117,16 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		}
 
 		if(extension) {
+			ClassTypeNode parent = (ClassTypeNode) n.superEntry.type;
+			ClassTypeNode currentClass = (ClassTypeNode) n.type;
 			for(int i = 0; i < n.fieldlist.size(); i++) {
 				var field = n.fieldlist.get(i);
 				/**
 				 *  calcolo offset per recuperare il corrispettivo TypeNode presente
 				 * in relativo ClassTypeNode
 				 **/
-				int position = Math.abs(n.fieldlist.get(i).offset) - 1;
-				ClassTypeNode parent = (ClassTypeNode) n.superEntry.type;
-				ClassTypeNode currentClass = (ClassTypeNode) n.type;
+				int position = -n.fieldlist.get(i).offset - 1;
+
 				if(position < parent.allFields.size() && i < n.type.allFields.size()) {
 					// overriding
 					if(field.isOverride) {
@@ -138,16 +139,33 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 					}
 				}
 			}
+
+			for(int c = 0; c < n.methodlist.size(); c++) {
+				int position = n.methodlist.get(c).offset;
+
+				if(position < parent.allMethods.size()) {
+					// overriding
+					MethodTypeNode atn = n.type.allMethods.get(position);
+					MethodTypeNode fatherAtn = parent.allMethods.get(position);
+					if( !isSubtype(atn, fatherAtn) ) {
+						throw new TypeException("Invalid overriding of " + c + "-th method in class " + n.id, n.getLine());
+					}
+				} else {
+					// senza overriding visito il metodo
+					visit(n.methodlist.get(c));
+				}
+			}
+		} else {
+			for (Node method : n.methodlist)
+				try {
+					// controlliamo i tipi dei metodi presenti all'interno della classe
+					visit(method);
+				} catch (IncomplException e) {
+				} catch (TypeException e) {
+					throw new TypeException("Type checking error in a declaration of a method: " + e.text, n.getLine());
+				}
 		}
 
-		for (Node method : n.methodlist)
-			try {
-				// controlliamo i tipi dei metodi presenti all'interno della classe
-				visit(method);
-			} catch (IncomplException e) {
-			} catch (TypeException e) {
-				throw new TypeException("Type checking error in a declaration of a method: " + e.text, n.getLine());
-			}
 		return null;
 
 	}
@@ -169,6 +187,10 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		// verifico le relazioni di subtyping tra il risultato del ramo else con quello del ramo then
 		if (isSubtype(t, e)) return e;
 		if (isSubtype(e, t)) return t;
+		TypeNode lowestCommonAncestor = lowestCommonAncestor(t, e);
+		if(lowestCommonAncestor != null) {
+			return lowestCommonAncestor;
+		}
 		throw new TypeException("Incompatible types in then-else branches",n.getLine());
 	}
 

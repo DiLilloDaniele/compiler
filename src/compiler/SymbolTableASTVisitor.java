@@ -14,6 +14,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	private int nestingLevel=0; // current nesting level
 	private int decOffset=-2; // counter for offset of local declarations at current nesting level 
 	int stErrors=0;
+	private Set<String> symbolIDs;
 
 	SymbolTableASTVisitor() {}
 	SymbolTableASTVisitor(boolean debug) {super(debug);} // enables print for debugging
@@ -82,6 +83,9 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	@Override
 	public Void visitNode(ClassNode n) throws VoidException {
 		if (print) printNode(n);
+
+		symbolIDs = new HashSet<>();
+
 		Map<String, STentry> hm = symTable.get(0);
 
 		ClassTypeNode classTypeNode;
@@ -137,32 +141,33 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 		// visita di tutti i campi dichiarati per la classe, in modo da verificare che non ci siano conflitti di dichiarazioni già esistenti
 		for (int i=0; i<n.fieldlist.size(); i++) {
 			FieldNode field = n.fieldlist.get(i);
-			if(!virtualTable.containsKey(field.id)) {
-				// non c'è override
-				if (virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), fieldOffset--)) != null) {
-					System.out.println("Field id " + field.id + " at line " + n.getLine() + " already declared");
-					stErrors++;
-				} else {
-					// aggiorno la lista fields relativa al ClassTypeNode
-					classTypeNode.allFields.add(field.getType());
-				}
+			if(!symbolIDs.add(field.id)) {
+				System.out.println("Field id " + field.id + " at line " + n.getLine() + " already declared");
+				stErrors++;
 			} else {
-				// c'è override
-				STentry oldEntry = virtualTable.get(field.id);
-				// invalid overriding
-				if(oldEntry.type instanceof MethodTypeNode) {
-					System.out.println("Field " + n.id+"."+field.id + " cannot override a method in superclass");
-					stErrors++;
+				if(!virtualTable.containsKey(field.id)) {
+					// non c'è override
+					virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), fieldOffset));
+					field.offset = fieldOffset;
+					fieldOffset--;
+					classTypeNode.allFields.add(field.getType());
 				} else {
-					// correct overriding
-					virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), oldEntry.offset));
-					field.offset = oldEntry.offset;
-					field.isOverride = true;
-					classTypeNode.allFields.set(Math.abs(oldEntry.offset) - 1, field.getType()); // TODO ????
+					// c'è override
+					STentry oldEntry = virtualTable.get(field.id);
+					// invalid overriding
+					if(oldEntry.type instanceof MethodTypeNode) {
+						System.out.println("Field " + n.id+"."+field.id + " cannot override a method in superclass");
+						stErrors++;
+					} else {
+						// correct overriding
+						virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), oldEntry.offset));
+						field.offset = oldEntry.offset;
+						field.isOverride = true;
+						System.out.println("OVERRIDE FIEELD");
+						classTypeNode.allFields.set(Math.abs(oldEntry.offset) - 1, field.getType());
+					}
 				}
-
 			}
-
 		}
 
 		decOffset = (Objects.equals(n.superId, "")) ? 0 : superType.allMethods.size();;
@@ -170,32 +175,33 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 		for(int i=0; i<n.methodlist.size(); i++) {
 			MethodNode method = n.methodlist.get(i);
 			visit(method);
-
-			if(!virtualTable.containsKey(method.id)) {
-				// non c'è override
-				if (virtualTable.put(method.id, new STentry(nestingLevel, method.getType(), decOffset)) != null) {
-					System.out.println("Method id " + n.id+"."+method.id + " at line " + n.getLine() + " already declared");
-					stErrors++;
-				}
-				// aggiorno la lista fields relativa al ClassTypeNode
-				method.offset = decOffset;
-				decOffset++;
-				classTypeNode.allMethods.add(new MethodTypeNode(new ArrowTypeNode(method.parlist.stream().map(DecNode::getType).collect(Collectors.toList()), method.retType)));
+			if(!symbolIDs.add(method.id)) {
+				System.out.println("Method id " + n.id+"."+method.id + " at line " + n.getLine() + " already declared");
+				stErrors++;
 			} else {
-				// c'è override
-				STentry oldEntry = virtualTable.get(method.id);
-				// invalid overriding
-				if(!(oldEntry.type instanceof MethodTypeNode)) {
-					System.out.println("Method " + n.id+"."+method.id + " cannot override a field in superclass. It is " + (oldEntry.type));
-					stErrors++;
+				if(!virtualTable.containsKey(method.id)) {
+					// non c'è override
+					virtualTable.put(method.id, new STentry(nestingLevel, method.getType(), decOffset));
+					// aggiorno la lista fields relativa al ClassTypeNode
+					method.offset = decOffset;
+					decOffset++;
+					classTypeNode.allMethods.add(new MethodTypeNode(new ArrowTypeNode(method.parlist.stream().map(DecNode::getType).collect(Collectors.toList()), method.retType)));
 				} else {
-					// correct overriding
-					virtualTable.put(method.id, new STentry(nestingLevel, method.getType(), oldEntry.offset));
-					method.offset = oldEntry.offset;
-					classTypeNode.allMethods.set(oldEntry.offset,
-							new MethodTypeNode(
-									new ArrowTypeNode(method.parlist.stream().map(DecNode::getType).collect(Collectors.toList()), method.retType))
-					);
+					// c'è override
+					STentry oldEntry = virtualTable.get(method.id);
+					// invalid overriding
+					if(!(oldEntry.type instanceof MethodTypeNode)) {
+						System.out.println("Method " + n.id+"."+method.id + " cannot override a field in superclass. It is " + (oldEntry.type));
+						stErrors++;
+					} else {
+						// correct overriding
+						virtualTable.put(method.id, new STentry(nestingLevel, method.getType(), oldEntry.offset));
+						method.offset = oldEntry.offset;
+						classTypeNode.allMethods.set(oldEntry.offset,
+								new MethodTypeNode(
+										new ArrowTypeNode(method.parlist.stream().map(DecNode::getType).collect(Collectors.toList()), method.retType))
+						);
+					}
 				}
 			}
 		}
