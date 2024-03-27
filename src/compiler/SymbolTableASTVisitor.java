@@ -14,7 +14,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	private int nestingLevel=0; // current nesting level
 	private int decOffset=-2; // counter for offset of local declarations at current nesting level 
 	int stErrors=0;
-	private Set<String> symbolIDs;
+	private Set<String> symbolIDs; // per ottimizzazioni
 
 	SymbolTableASTVisitor() {}
 	SymbolTableASTVisitor(boolean debug) {super(debug);} // enables print for debugging
@@ -332,7 +332,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	}
 
 	@Override
-	public Void visitNode(LesseqNode n) throws VoidException {
+	public Void visitNode(LessEqualNode n) throws VoidException {
 		if (print) printNode(n);
 		visit(n.left);
 		visit(n.right);
@@ -340,7 +340,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	}
 
 	@Override
-	public Void visitNode(GreqNode n) throws VoidException {
+	public Void visitNode(GreaterEqualNode n) throws VoidException {
 		if (print) printNode(n);
 		visit(n.left);
 		visit(n.right);

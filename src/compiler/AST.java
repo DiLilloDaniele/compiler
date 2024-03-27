@@ -63,8 +63,8 @@ public class AST {
 		int offset;
 		TypeNode type;
 
-		public void setType(TypeNode _type) {
-			this.type = _type;
+		public void setType(TypeNode ptype) {
+			this.type = ptype;
 		}
 
 		@Override
@@ -91,7 +91,7 @@ public class AST {
 	public static class VarNode extends DecNode {
 		final String id;
 		final Node exp;
-		VarNode(String i, TypeNode t, Node v) {id = i; type = t; exp = v;}
+		VarNode(String id, TypeNode type, Node exp) {this.id = id; this.type = type; this.exp = exp;}
 
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
@@ -147,7 +147,7 @@ public class AST {
 		final List<FieldNode> fieldlist;
 		final List<MethodNode> methodlist;
 		String superId = "";
-		ClassTypeNode type; // tipo della classe
+		ClassTypeNode type;
 		STentry superEntry; // entry della classe da cui eredita
 
 		ClassNode(String i, List<FieldNode> pl, List<MethodNode> fl) {
@@ -159,18 +159,19 @@ public class AST {
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}
 
-	public static class LesseqNode extends Node {
+	public static class LessEqualNode extends Node {
 		final Node left;
+
 		final Node right;
-		LesseqNode(Node l, Node r) {left = l; right = r;}
+		LessEqualNode(Node l, Node r) {left = l; right = r;}
 
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}
-	public static class GreqNode extends Node {
+	public static class GreaterEqualNode extends Node {
 		final Node left;
 		final Node right;
-		GreqNode(Node l, Node r) {left = l; right = r;}
+		GreaterEqualNode(Node l, Node r) {left = l; right = r;}
 
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}

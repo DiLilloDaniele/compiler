@@ -3,12 +3,9 @@ package compiler;
 import compiler.AST.*;
 import compiler.lib.*;
 import compiler.exc.*;
-import svm.ExecuteVM;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static compiler.lib.FOOLlib.*;
 import static svm.ExecuteVM.MEMSIZE;
@@ -49,15 +46,15 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	}
 
 	@Override
-	public String visitNode(LesseqNode n) throws VoidException {
+	public String visitNode(LessEqualNode n) throws VoidException {
 		String l1 = freshLabel();
 		String l2 = freshLabel();
 		return nlJoin(
-				visit(n.left), // push del primo elemento da controllare
-				visit(n.right), // push del secondo elemento
-				"bleq " + l1, // vado in l1 perché metto in stack true (left <= right)
-				"push 0", // altrimenti metto in stack false
-				"b " + l2, // salto incondizionato su l2 per saltare l1
+				visit(n.left), // push the first element to check
+				visit(n.right), // push the second element
+				"bleq " + l1, // go to l1 in order to push true into stack (left <= right)
+				"push 0", // otherwise push false
+				"b " + l2, // jump to l2 to avoid l1
 				l1 + ":",
 				"push 1",
 				l2 + ":"
@@ -65,15 +62,15 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	}
 
 	@Override
-	public String visitNode(GreqNode n) throws VoidException {
+	public String visitNode(GreaterEqualNode n) throws VoidException {
 		String l1 = freshLabel();
 		String l2 = freshLabel();
 		return nlJoin(
-				visit(n.right), // push del primo elemento da controllare
-				visit(n.left), // push del secondo elemento
-				"bleq " + l1, // vado in l1 perché metto in stack true (left >= right)
-				"push 0", // altrimenti metto in stack false
-				"b " + l2, // salto incondizionato su l2 per saltare l1
+				visit(n.right), // push the first element to check
+				visit(n.left), // push the second element
+				"bleq " + l1, // go to l1 in order to push true (left >= right)
+				"push 0", // otherwise false
+				"b " + l2, // jump to l2 to avoid l1
 				l1 + ":",
 				"push 1",
 				l2 + ":"
@@ -87,13 +84,13 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		String label2 = freshLabel();
 
 		return nlJoin(
-				visit(n.right), // pusho gli operandi
+				visit(n.right), // push the operands
 				visit(n.left),
-				"bleq " + label1, // se right <= left significa che comanda l'operando sinistro
-				visit(n.right), // altrimenti comanda l'operando destro
+				"bleq " + label1, // if right <= left it means that left operand leads
+				visit(n.right), // otherwise the right one
 				"b " + label2,
 				label1 + ":",
-				visit(n.left), // se left e true metto true in stack, altrimenti false
+				visit(n.left), // if left is true push true into stack, false otherwise
 				label2 + ":"
 		);
 	}
@@ -105,7 +102,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 				visit(n.left),
 				visit(n.right),
-				"mult" // and come moltiplicazione dei due operandi (0 o 1)
+				"mult" // and as mult operation between the two operands (0 o 1)
 		);
 	}
 
@@ -115,7 +112,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 				visit(n.left),
 				visit(n.right),
-				"div" // divisione
+				"div"
 		);
 	}
 
@@ -125,7 +122,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 				visit(n.left),
 				visit(n.right),
-				"sub" // sottrazione
+				"sub"
 		);
 	}
 
@@ -195,8 +192,8 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	public String visitNode(NotNode n) throws VoidException {
 		if (print) printNode(n);
 		return nlJoin(
-				// per invertire un booleano (0 e 1) eseguo la sottrazione per 1
-				// 1 è true 0 è false
+				// in order to negate a boolean (0 e 1) do the sub operation with 1
+				// 1 is true 0 is false
 				"push 1",
 				visit(n.node),
 				"sub"
@@ -213,14 +210,13 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		}
 		for(MethodNode method : n.methodlist) {
 			String freshLabel = freshFunLabel();
-			//dispatchTable.add(freshLabel);
 			method.label = freshLabel;
 			int methodOffset = method.offset;
 			if(methodOffset >= dispatchTable.size()) {
-				// se il metodo non fa overriding, lo aggiungo alla fine della lista
+				// if non-override adds the method to the bottom of the list
 				dispatchTable.add(freshLabel);
 			} else {
-				// se il metodo fa overriding, sostituisco quello vecchio
+				// if override substitutes the already present method
 				dispatchTable.set(methodOffset, freshLabel);
 			}
 			visit(method);
@@ -230,13 +226,13 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		for (String methodLabel : dispatchTable) {
 			labels = nlJoin(labels,
 					"/* method " + methodLabel + "*/",
-					"push " +methodLabel, // pusho la label sullo stack
-					"lhp", // pusho hp su stack
-					"sw", // poppo due valori: hp e label presenti su stack e memorizzo label in indirizzo presente in hp
-					"push 1", // pusho 1 per incrementare hp
-					"lhp", // pusho hp per eseguire la somma con 1
-					"add", // poppo due valori e li sommo: hp + 1
-					"shp" // memorizzo il risultato della somma in hp (hp = hp + 1)
+					"push " +methodLabel, // push the label into the stack
+					"lhp", // pusho hp into stack
+					"sw", // pop two values: hp and label and memorize label into the address contained in hp register
+					"push 1", // push 1 to increment hp
+					"lhp", // push hp
+					"add", // pop two values and do the sum: hp + 1
+					"shp" // store the final result into hp (hp = hp + 1)
 			);
 		}
 
@@ -297,13 +293,13 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		String pushOnHeapCode = null;
 		for (int i=0;i<n.arglist.size();i++) {
 			pushOnHeapCode = nlJoin(pushOnHeapCode,
-					"lhp", // pusho hp su stack
-					"sw", // poppo due valori: hp e label presenti su stack e memorizzo label in indirizzo presente in hp
+					"lhp", // push hp into stack
+					"sw", // pop two values: hp and label and memorize label into the address contained in hp register
 
-					"lhp", // pusho 1 per incrementare hp
-					"push 1", // pusho hp per eseguire la somma con 1
-					"add", // poppo due valori e li sommo: hp + 1
-					"shp" // memorizzo il risultato della somma in hp (hp = hp + 1)
+					"lhp", // push hp
+					"push 1", // push 1 to increment hp
+					"add", // pop two values and do the sum: hp + 1
+					"shp" // store the final result into hp (hp = hp + 1)
 			);
 		}
 
@@ -312,18 +308,18 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 				pushOnHeapCode,
 				"push " + MEMSIZE,
 				"push " + n.entry.offset,
-				"add", // calcolo dispatch pointer
+				"add", // calculate the dispatch pointer
 				"lw",
 
 				"lhp",
-				"sw", // scrivo il dispatch pointer nell'indirizzo contenuto in hp
+				"sw", // write the dispatch pointer into the address contained in hp register
 
-				"lhp", // carico object pointer da ritornare
+				"lhp", // load the object pointer to be returned
 
-				"lhp", // pusho hp per eseguire la somma con 1
-				"push 1", // pusho 1 per incrementare hp
-				"add", // poppo due valori e li sommo: hp + 1
-				"shp" // memorizzo il risultato della somma in hp (hp = hp + 1)
+				"lhp", // push hp
+				"push 1", // push 1 to increment hp
+				"add", // pop two values and do the sum: hp + 1
+				"shp" // store the final result into hp (hp = hp + 1)
 		);
 
 	}
@@ -351,11 +347,11 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 			visit(n.cond),
 			"push 1",
-			"beq "+l1, // controllo che la condizione sia vera
-			visit(n.el), // visito il ramo else
-			"b "+l2, // salto sul then
+			"beq "+l1, // check the condition is true
+			visit(n.el), // visit else branch
+			"b "+l2, // jump to then branch
 			l1+":",
-			visit(n.th), // visito il ramo then
+			visit(n.th), // visit then branch
 			l2+":"
 		);
 	}
@@ -368,7 +364,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 			visit(n.left),
 			visit(n.right),
-			"beq "+l1, // controllo che i due operandi siano uguali
+			"beq "+l1, // check the operands are equal
 			"push 0",
 			"b "+l2,
 			l1+":",
@@ -383,7 +379,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 			visit(n.left),
 			visit(n.right),
-			"mult" // moltiplicazione
+			"mult"
 		);	
 	}
 
@@ -393,7 +389,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 			visit(n.left),
 			visit(n.right),
-			"add" // somma
+			"add"
 		);
 	}
 
@@ -404,11 +400,11 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		if (print) printNode(n,n.id);
 		String argCode = null, getAR = null;
 
-		// pusho gli argomenti
+		// push the arguments
 		for (int i=n.arglist.size()-1;i>=0;i--)
 			argCode=nlJoin(argCode,visit(n.arglist.get(i)));
 
-		// risalita degli AR
+		// AR ascent
 		for (int i = 0;i<n.nl-n.entry.nl;i++)
 			getAR=nlJoin(getAR,"lw");
 
