@@ -78,7 +78,7 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		// check that both t1 and t2 are instance of a reference type
 		if(t1 instanceof RefTypeNode && t2 instanceof RefTypeNode) {
 			// check that both refers to the same class
-			if ( !isSameClass((RefTypeNode)t2,(RefTypeNode) t1) && !isSubClass((RefTypeNode)t2,(RefTypeNode) t1))
+			if ( !isSubtype((RefTypeNode)t2,(RefTypeNode) t1) && !isSubClass((RefTypeNode)t2,(RefTypeNode) t1))
 				throw new TypeException("Incompatible class for variable " + n.id,n.getLine());
 		}
 
@@ -239,10 +239,12 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		TypeNode t = visit(n.entry);
 		ArrowTypeNode at;
 		// check that it refers to a function or a class method
-		if ( !(t instanceof ArrowTypeNode) )
-			throw new TypeException("Invocation of a non-function "+n.id,n.getLine());
-		else
+		if ( t instanceof ArrowTypeNode )
 			at = (ArrowTypeNode) t;
+		else if( t instanceof MethodTypeNode)
+			at = ((MethodTypeNode)t).fun;
+		else
+			throw new TypeException("Invocation of a non-function "+n.id,n.getLine());
 
 		// number and type of parameters check
 		if ( !(at.parlist.size() == n.arglist.size()) )
@@ -320,8 +322,12 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 	@Override
 	public TypeNode visitNode(ClassCallNode n) throws TypeException {
 		if (print) printNode(n,n.id);
+		TypeNode obj = visit(n.entry);
 		TypeNode t = visit(n.methodEntry);
 		MethodTypeNode at;
+
+		if(! (obj instanceof RefTypeNode))
+			throw new TypeException("Invocation of a method of a non-reference "+n.idMethod,n.getLine());
 
 		// check that the call refers to a method
 		if(t instanceof MethodTypeNode)

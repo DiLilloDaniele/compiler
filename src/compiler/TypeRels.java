@@ -12,7 +12,6 @@ public class TypeRels {
 
 	public static Map<String, String> superType = new HashMap<>();
 
-	// valuta se il tipo "a" e' <= al tipo "b", dove "a" e "b" sono tipi di base: IntTypeNode o BoolTypeNode
 	public static boolean isSubtype(TypeNode a, TypeNode b) {
 		return a.getClass().equals(b.getClass()) ||
 				((a instanceof BoolTypeNode) && (b instanceof IntTypeNode)) ||
@@ -38,11 +37,6 @@ public class TypeRels {
 
 		return isSubtype(ar_a.ret, ar_b.ret) && covariancy;
 
-	}
-
-	// metodo dedicato per controllare che due riferimenti siano relativi a due classi uguali, con lo stesso id
-	public static boolean isSameClass(RefTypeNode a, RefTypeNode b) {
-		return Objects.equals(a.classId, b.classId);
 	}
 
 	public static boolean isSubClass(TypeNode a, TypeNode b) {
