@@ -140,7 +140,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 			nlJoin(
 				funl+":",
 				"cfp", // set $fp to $sp value
-				"lra", // load $ra value
+				"lra", // load $ra value (in order to return to caller)
 				declCode, // generate code for local declarations (they use the new $fp!!!)
 				visit(n.exp), // generate code for function body expression
 				"stm", // set $tm to popped value (function result)
@@ -154,7 +154,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 				"js"  // jump to to popped address
 			)
 		);
-		return "push "+funl;		
+		return "push "+funl;
 	}
 
 	@Override
@@ -305,7 +305,8 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 
 		return nlJoin(
 				argCode,
-				pushOnHeapCode,
+				pushOnHeapCode, // push all the arg
+				// uments on the heap code memory
 				"push " + MEMSIZE,
 				"push " + n.entry.offset,
 				"add", // calculate the dispatch pointer
@@ -411,15 +412,16 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		return nlJoin(
 			"lfp", // load Control Link (pointer to frame of function "id" caller)
 			argCode, // generate code for argument expressions in reversed order
-			"lfp", getAR, // retrieve address of frame containing "id" declaration
-                          // by following the static chain (of Access Links)
+			"lfp", // load CL again to start the ascent of AL (addresses of previous ARs)
+			getAR, // retrieve address of frame containing "id" declaration
+				   // by following the static chain (of Access Links)
             "stm", // set $tm to popped value (with the aim of duplicating top of stack)
             "ltm", // load Access Link (pointer to frame of function "id" declaration)
-            "ltm", // duplicate top of stack
+            "ltm", // duplicated top of stack (first load to tm register and then load twice on top of the stack)
 
             "push " + n.entry.offset,
 			"add", // compute address of "id" declaration
-			"lw", // load address of "id" function
+			"lw", // load address of "id" function to execute it
             "js"  // jump to popped address (saving address of subsequent instruction in $ra)
 		);
 	}

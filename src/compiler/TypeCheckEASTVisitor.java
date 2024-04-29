@@ -128,6 +128,7 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 
 				if(position < parent.allFields.size() && i < n.type.allFields.size()) {
 					// overriding
+
 					if(field.isOverride) {
 						var fieldType = currentClass.allFields.get(position);
 						var parentField = parent.allFields.get(position);
