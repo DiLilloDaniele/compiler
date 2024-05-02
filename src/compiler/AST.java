@@ -144,11 +144,11 @@ public class AST {
 
 	public static class ClassNode extends DecNode {
 		final String id;
+		String superId = "";
 		final List<FieldNode> fieldlist;
 		final List<MethodNode> methodlist;
-		String superId = "";
 		ClassTypeNode type;
-		STentry superEntry; // entry della classe da cui eredita
+		STentry superEntry; // entry of the inherited class
 
 		ClassNode(String i, List<FieldNode> pl, List<MethodNode> fl) {
 			id=i;
@@ -161,7 +161,6 @@ public class AST {
 
 	public static class LessEqualNode extends Node {
 		final Node left;
-
 		final Node right;
 		LessEqualNode(Node l, Node r) {left = l; right = r;}
 
@@ -209,8 +208,10 @@ public class AST {
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
 	}
 	public static class NotNode extends Node {
-		final Node node;
-		NotNode(Node n) {node = n;}
+		final Node exp;
+		NotNode(Node n) {
+			exp = n;
+		}
 
 		@Override
 		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
@@ -332,16 +333,6 @@ public class AST {
 		}
 	}
 
-	public static class MethodTypeNode extends TypeNode {
-		final ArrowTypeNode fun;
-		public MethodTypeNode(ArrowTypeNode arrowTypeNode) {
-			this.fun = arrowTypeNode;
-		}
-
-		@Override
-		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
-	}
-
 	public static class ClassTypeNode extends TypeNode {
 
 		ArrayList<TypeNode> allFields;
@@ -350,6 +341,16 @@ public class AST {
 		public ClassTypeNode(ArrayList<TypeNode> allFields, ArrayList<MethodTypeNode> allMethods) {
 			this.allFields = allFields;
 			this.allMethods = allMethods;
+		}
+
+		@Override
+		public <S,E extends Exception> S accept(BaseASTVisitor<S,E> visitor) throws E {return visitor.visitNode(this);}
+	}
+
+	public static class MethodTypeNode extends TypeNode {
+		final ArrowTypeNode fun;
+		public MethodTypeNode(ArrowTypeNode arrowTypeNode) {
+			this.fun = arrowTypeNode;
 		}
 
 		@Override

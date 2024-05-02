@@ -45,7 +45,6 @@ public class TypeRels {
 
 		String a_id = ((RefTypeNode) a).classId;
 		String b_id = ((RefTypeNode) b).classId;
-		System.out.println(a_id + " - " + b_id);
 		while(!a_id.equals(b_id)) {
 			a_id = superType.get(a_id);
 			if(Objects.equals(a_id, "")) return false;

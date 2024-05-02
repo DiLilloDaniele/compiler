@@ -64,13 +64,12 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 	public Node visitTimesDiv(TimesDivContext c) {
 		if (print) printVarAndProdName(c);
 		Node n = null;
-		if(c.DIV() != null) {
-			n = new DivNode(visit(c.exp(0)), visit(c.exp(1)));
-			n.setLine(c.DIV().getSymbol().getLine());
-		}
 		if(c.TIMES() != null) {
 			n = new TimesNode(visit(c.exp(0)), visit(c.exp(1)));
 			n.setLine(c.TIMES().getSymbol().getLine());
+		}else if(c.DIV() != null) {
+			n = new DivNode(visit(c.exp(0)), visit(c.exp(1)));
+			n.setLine(c.DIV().getSymbol().getLine());
 		}
         return n;		
 	}
@@ -82,8 +81,7 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 		if(c.MINUS() != null) {
 			n = new MinusNode(visit(c.exp(0)), visit(c.exp(1)));
 			n.setLine(c.MINUS().getSymbol().getLine());
-		}
-		if(c.PLUS() != null) {
+		}else if(c.PLUS() != null) {
 			n = new PlusNode(visit(c.exp(0)), visit(c.exp(1)));
 			n.setLine(c.PLUS().getSymbol().getLine());
 		}
@@ -94,13 +92,12 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 	public Node visitAndOr(AndOrContext c) {
 		if (print) printVarAndProdName(c);
 		Node n = null;
-		if(c.AND() != null) {
-			n = new AndNode(visit(c.exp(0)), visit(c.exp(1)));
-			n.setLine(c.AND().getSymbol().getLine());
-		}
 		if(c.OR() != null) {
 			n = new OrNode(visit(c.exp(0)), visit(c.exp(1)));
 			n.setLine(c.OR().getSymbol().getLine());
+		} else if(c.AND() != null) {
+			n = new AndNode(visit(c.exp(0)), visit(c.exp(1)));
+			n.setLine(c.AND().getSymbol().getLine());
 		}
 		return n;
 	}
@@ -112,12 +109,10 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 		if(c.EQ() != null) {
 			n = new EqualNode(visit(c.exp(0)), visit(c.exp(1)));
 			n.setLine(c.EQ().getSymbol().getLine());
-		}
-		if(c.GE() != null) {
+		} else if(c.GE() != null) {
 			n = new GreaterEqualNode(visit(c.exp(0)), visit(c.exp(1)));
 			n.setLine(c.GE().getSymbol().getLine());
-		}
-		if(c.LE() != null) {
+		} else if(c.LE() != null) {
 			n = new LessEqualNode(visit(c.exp(0)), visit(c.exp(1)));
 			n.setLine(c.LE().getSymbol().getLine());
 		}
@@ -135,16 +130,18 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 	@Override
 	public Node visitMethdec(MethdecContext c) {
 		if (print) printVarAndProdName(c);
-		List<ParNode> parList = new ArrayList<>();
-		for (int i = 1; i < c.ID().size(); i++) {
-			ParNode p = new ParNode(c.ID(i).getText(),(TypeNode) visit(c.type(i)));
-			p.setLine(c.ID(i).getSymbol().getLine());
-			parList.add(p);
-		}
 		List<DecNode> decList = new ArrayList<>();
+		List<ParNode> parList = new ArrayList<>();
+		MethodNode n = null;
+
+		for (int i = 1; i < c.ID().size(); i++) {
+			ParNode par = new ParNode(c.ID(i).getText(),(TypeNode) visit(c.type(i)));
+			par.setLine(c.ID(i).getSymbol().getLine());
+			parList.add(par);
+		}
 
 		for (DecContext dec : c.dec()) decList.add((DecNode) visit(dec));
-		MethodNode n = null;
+
 		if (c.ID().size()>0) { //non-incomplete ST
 			n = new MethodNode(c.ID(0).getText(),(TypeNode)visit(c.type(0)),parList,decList,visit(c.exp()));
 			n.label = c.ID(0).getText();
@@ -157,9 +154,8 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 	public Node visitCldec(CldecContext c) {
 		if (print) printVarAndProdName(c);
 		List<FieldNode> fieldList = new ArrayList<>();
-		// navigo tutti i campi da indice 1 (tralasciando quindi l'ID della classe) e cerco il tipo di indice i - 1 dato
-		// che l'indice del primo tipo del primo campo è 0, scalato di 1 dalla lista dei campi
-		// indice 2 perché ID in indice 1 è EXTENDS (se presente)
+		// navigate to all the fields from index 1 (thus leaving out the class ID) and look for the type of index i - 1
+		// index 2 because ID in index 1 is EXTENDS (if present)
 		int startIndex = (c.EXTENDS() == null ? 1 : 2);
 		for (int i = startIndex; i < c.ID().size(); i++) {
 			FieldNode p = new FieldNode(c.ID(i).getText(),(TypeNode) visit(c.type(i - startIndex)));
@@ -230,15 +226,17 @@ public class ASTGenerationSTVisitor extends FOOLBaseVisitor<Node> {
 	public Node visitFundec(FundecContext c) {
 		if (print) printVarAndProdName(c);
 		List<ParNode> parList = new ArrayList<>();
+		List<DecNode> decList = new ArrayList<>();
+		Node n = null;
+
 		for (int i = 1; i < c.ID().size(); i++) {
 			ParNode p = new ParNode(c.ID(i).getText(),(TypeNode) visit(c.type(i)));
 			p.setLine(c.ID(i).getSymbol().getLine());
 			parList.add(p);
 		}
-		List<DecNode> decList = new ArrayList<>();
 
 		for (DecContext dec : c.dec()) decList.add((DecNode) visit(dec));
-		Node n = null;
+
 		if (c.ID().size()>0) { //non-incomplete ST
 			n = new FunNode(c.ID(0).getText(),(TypeNode)visit(c.type(0)),parList,decList,visit(c.exp()));
 			n.setLine(c.FUN().getSymbol().getLine());

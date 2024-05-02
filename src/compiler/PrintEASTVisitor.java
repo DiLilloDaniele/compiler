@@ -84,6 +84,12 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 	}
 
 	@Override
+	public Void visitNode(BoolNode n) {
+		printNode(n,n.val.toString());
+		return null;
+	}
+
+	@Override
 	public Void visitNode(PlusNode n) {
 		printNode(n);
 		visit(n.left);
@@ -100,21 +106,15 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 	}
 
 	@Override
+	public Void visitNode(IntNode n) {
+		printNode(n,n.val.toString());
+		return null;
+	}
+
+	@Override
 	public Void visitNode(IdNode n) {
 		printNode(n,n.id+" at nestinglevel "+n.nl);
 		visit(n.entry);
-		return null;
-	}
-
-	@Override
-	public Void visitNode(BoolNode n) {
-		printNode(n,n.val.toString());
-		return null;
-	}
-
-	@Override
-	public Void visitNode(IntNode n) {
-		printNode(n,n.val.toString());
 		return null;
 	}
 	
@@ -156,7 +156,7 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 	}
 
 	@Override
-	public Void visitNode(GreaterEqualNode n) throws VoidException {
+	public Void visitNode(DivNode n) throws VoidException {
 		printNode(n);
 		visit(n.left);
 		visit(n.right);
@@ -180,7 +180,7 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 	}
 
 	@Override
-	public Void visitNode(DivNode n) throws VoidException {
+	public Void visitNode(GreaterEqualNode n) throws VoidException {
 		printNode(n);
 		visit(n.left);
 		visit(n.right);
@@ -198,7 +198,7 @@ public class PrintEASTVisitor extends BaseEASTVisitor<Void,VoidException> {
 	@Override
 	public Void visitNode(NotNode n) throws VoidException {
 		printNode(n);
-		visit(n.node);
+		visit(n.exp);
 		return null;
 	}
 

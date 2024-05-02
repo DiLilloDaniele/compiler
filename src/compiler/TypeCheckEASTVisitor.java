@@ -33,6 +33,8 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 			try {
 				visit(cl);
 			} catch (IncomplException e) {
+			} catch (TypeException e) {
+				System.out.println("Type checking error in a declaration: " + e.text);
 			}
 		// visit all declarations
 		for (Node dec : n.declist)
@@ -78,7 +80,7 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		// check that both t1 and t2 are instance of a reference type
 		if(t1 instanceof RefTypeNode && t2 instanceof RefTypeNode) {
 			// check that both refers to the same class
-			if ( !isSubtype((RefTypeNode)t2,(RefTypeNode) t1) && !isSubClass((RefTypeNode)t2,(RefTypeNode) t1))
+			if ( !isSubtype(t2, t1) && !isSubClass(t2, t1))
 				throw new TypeException("Incompatible class for variable " + n.id,n.getLine());
 		}
 
@@ -121,8 +123,8 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 			for(int i = 0; i < n.fieldlist.size(); i++) {
 				var field = n.fieldlist.get(i);
 				/**
-				 *  calcolo offset per recuperare il corrispettivo TypeNode presente
-				 * in relativo ClassTypeNode
+				 *  calculate offset to retrieve the specific TypeNode present
+				 * inside the corresponding ClassTypeNode
 				 **/
 				int position = -n.fieldlist.get(i).offset - 1;
 
@@ -229,7 +231,7 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 	public TypeNode visitNode(NotNode n) throws TypeException {
 		if (print) printNode(n);
 		// subtype relation between bool type and two operands
-		if ( !(isSubtype(visit(n.node), new BoolTypeNode())))
+		if ( !(isSubtype(visit(n.exp), new BoolTypeNode())))
 			throw new TypeException("Non boolean in not",n.getLine());
 		return new BoolTypeNode();
 	}
@@ -336,12 +338,16 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		else
 			throw new TypeException("Invocation of a non-method "+n.idMethod,n.getLine());
 
-		// controllo il numero e il tipo di parametri
+		// check the number and type of parameters
 		if ( !(at.fun.parlist.size() == n.arglist.size()) )
 			throw new TypeException("Wrong number of parameters in the invocation of "+n.id,n.getLine());
-		for (int i = 0; i < n.arglist.size(); i++)
-			if ( !(isSubtype(visit(n.arglist.get(i)),at.fun.parlist.get(i))) )
-				throw new TypeException("Wrong type for "+(i+1)+"-th parameter in the invocation of "+n.id,n.getLine());
+
+		for (int i = 0; i < n.arglist.size(); i++) {
+			TypeNode argType = visit(n.arglist.get(i));
+			TypeNode declarationType = at.fun.parlist.get(i);
+			if (!(isSubtype(argType, declarationType)))
+				throw new TypeException("Wrong type for " + (i + 1) + "-th parameter in the invocation of " + n.id, n.getLine());
+		}
 		return at.fun.ret;
 	}
 
@@ -365,10 +371,10 @@ public class TypeCheckEASTVisitor extends BaseEASTVisitor<TypeNode,TypeException
 		// check the number of fields and type of field of the new instance call (referred to the class to instantiate)
 		if ( !(at.allFields.size() == n.arglist.size()) )
 			throw new TypeException("Wrong number of parameters in the invocation of "+n.id,n.getLine());
-		for (int i = 0; i < n.arglist.size(); i++)
-			if ( !(isSubtype(visit(n.arglist.get(i)),at.allFields.get(i))) )
-				throw new TypeException("Wrong type for "+(i+1)+"-th parameter in the invocation of "+n.id,n.getLine());
-
+		for (int i = 0; i < n.arglist.size(); i++) {
+			if (!(isSubtype(visit(n.arglist.get(i)), at.allFields.get(i))))
+				throw new TypeException("Wrong type for " + (i + 1) + "-th parameter in the invocation of " + n.id, n.getLine());
+		}
 		return new RefTypeNode(n.id);
 	}
 

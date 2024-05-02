@@ -10,11 +10,11 @@ import compiler.lib.*;
 public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	
 	private List<Map<String, STentry>> symTable = new ArrayList<>();
-	private Map<String, Map<String, STentry>> classTable = new HashMap<>();
 	private int nestingLevel=0; // current nesting level
 	private int decOffset=-2; // counter for offset of local declarations at current nesting level 
 	int stErrors=0;
-	private Set<String> symbolIDs; // per ottimizzazioni
+	private Map<String, Map<String, STentry>> classTable = new HashMap<>(); // map a class id to the virtual table of that class
+	private Set<String> symbolIDs; // for optimizations
 
 	SymbolTableASTVisitor() {}
 	SymbolTableASTVisitor(boolean debug) {super(debug);} // enables print for debugging
@@ -105,7 +105,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 
 			// pick up the STEntry of the super class, that is into the nesting level 0
 			n.superEntry = hm.get(n.superId);
-			// memorizzo il tipo della classe padre
+			// store the parent class type (super type)
 			superType = (ClassTypeNode) n.superEntry.type;
 
 			// initialize the ClassTypeNode with the inherited fields and methods
@@ -131,9 +131,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 		symTable.add(virtualTable);
 
 		int prevNLDecOffset=decOffset; // stores counter for offset of declarations at previous nesting level
-		// nel layout deciso a priori, decOffset indica il valore
-		// di offset per i metodi della classe, che per definizione parte da 0, per creare correttamente il layout dello HEAP
-		// da usare in fase runtime di creazione di oggetti
 
 		int fieldOffset = (Objects.equals(n.superId, "")) ? -1 : -superType.allFields.size() - 1;
 		for (int i=0; i<n.fieldlist.size(); i++) {
@@ -160,7 +157,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 						virtualTable.put(field.id, new STentry(nestingLevel, field.getType(), oldEntry.offset));
 						field.offset = oldEntry.offset;
 						field.isOverride = true;
-						System.out.println("OVERRIDE FIEELD");
 						classTypeNode.allFields.set(Math.abs(oldEntry.offset) - 1, field.getType());
 					}
 				}
@@ -212,7 +208,6 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	public Void visitNode(MethodNode n) throws VoidException {
 		if (print) printNode(n);
 		// retrieve the symbol table of the class, that is the virtual table
-		Map<String, STentry> hm = symTable.get(nestingLevel);
 		List<TypeNode> parTypes = new ArrayList<>();
 		for (ParNode par : n.parlist) parTypes.add(par.getType());
 		n.offset = decOffset;
@@ -438,7 +433,7 @@ public class SymbolTableASTVisitor extends BaseASTVisitor<Void,VoidException> {
 	@Override
 	public Void visitNode(NotNode n) throws VoidException {
 		if (print) printNode(n);
-		visit(n.node);
+		visit(n.exp);
 		return null;
 	}
 }
