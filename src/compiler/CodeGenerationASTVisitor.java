@@ -295,7 +295,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 				argCode, // generate code for argument expressions in reversed order
 				"lfp", getAR, // retrieve address of frame containing "id" declaration
 				// by following the static chain (of Access Links)
-				"push " + n.entry.offset, // address of object's dispatch pointer
+				"push " + n.entry.offset, // address of object pointer
 				"add",
 				"lw",
 
@@ -393,6 +393,7 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 	public String visitNode(CallNode n) {
 		if (print) printNode(n,n.id);
 		String argCode = null, getAR = null;
+		TypeNode callType = n.entry.type;
 
 		// push the arguments
 		for (int i=n.arglist.size()-1;i>=0;i--)
@@ -402,21 +403,40 @@ public class CodeGenerationASTVisitor extends BaseASTVisitor<String, VoidExcepti
 		for (int i = 0;i<n.nl-n.entry.nl;i++)
 			getAR=nlJoin(getAR,"lw");
 
-		return nlJoin(
-			"lfp", // load Control Link (pointer to frame of function "id" caller)
-			argCode, // generate code for argument expressions in reversed order
-			"lfp", // load CL again to start the ascent of AL (addresses of previous ARs)
-			getAR, // retrieve address of frame containing "id" declaration
-				   // by following the static chain (of Access Links)
-            "stm", // set $tm to popped value (with the aim of duplicating top of stack)
-            "ltm", // load Access Link (pointer to frame of function "id" declaration)
-            "ltm", // duplicated top of stack (first load to tm register and then load twice on top of the stack)
+		if(!(callType instanceof MethodTypeNode)){
+			return nlJoin(
+					"lfp", // load Control Link (pointer to frame of function "id" caller)
+					argCode, // generate code for argument expressions in reversed order
+					"lfp", // load CL again to start the ascent of AL (addresses of previous ARs)
+					getAR, // retrieve address of frame containing "id" declaration
+					// by following the static chain (of Access Links)
+					"stm", // set $tm to popped value (with the aim of duplicating top of stack)
+					"ltm", // load Access Link (pointer to frame of function "id" declaration)
+					"ltm", // duplicated top of stack (first load to tm register and then load twice on top of the stack)
 
-            "push " + n.entry.offset,
-			"add", // compute address of "id" declaration
-			"lw", // load address of "id" function to execute it
-            "js"  // jump to popped address (saving address of subsequent instruction in $ra)
-		);
+					"push " + n.entry.offset,
+					"add", // compute address of "id" declaration
+					"lw", // load address of "id" function to execute it
+					"js"  // jump to popped address (saving address of subsequent instruction in $ra)
+			);
+		} else {
+			return nlJoin(
+					"lfp", // load Control Link (pointer to frame of function "id" caller)
+					argCode, // generate code for argument expressions in reversed order
+					"lfp", // load CL again to start the ascent of AL (addresses of previous ARs)
+					getAR, // retrieve directly the Access Link of the declaration from the current AR (the same class): is the object pointer
+					"stm", // set $tm to popped value (with the aim of duplicating top of stack)
+					"ltm", // load Access Link (pointer to frame of function "id" declaration)
+					"ltm", // duplicated top of stack (first load to tm register and then load twice on top of the stack)
+
+					"lw", // load the dispatch pointer (address of the class id)
+
+					"push " + n.entry.offset,
+					"add", // compute address of "id" declaration
+					"lw", // load address of "id" function to execute it
+					"js"  // jump to popped address (saving address of subsequent instruction in $ra)
+			);
+		}
 	}
 
 	@Override
